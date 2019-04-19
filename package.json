@@ -1,6 +1,6 @@
 {
   "name": "jsmartobject",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Office-SmartObject implemented in D3js",
   "main": "index.js",
   "scripts": {

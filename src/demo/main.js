@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import {JSmartObject} from "../index";
+import {JSmartObject} from "../../index";
 
 (function(){
     let setStage = function (id) {
