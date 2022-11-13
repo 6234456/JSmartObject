@@ -163,6 +163,8 @@ JSmartObject.arrow = function (config) {
 
 /*
 hexagon
+
+origin is at the center of hexagon
 width : 2*x
 height: sqrt(3) * x
  */
@@ -171,7 +173,6 @@ JSmartObject.hexagon = function (config) {
     /**
      * config object:
      * attributes
-     * container    :String                         the container DOM Element to hold the component
      * len          :Number                         len
      */
     const sqrt3 = Math.sqrt(3) / 2 * config.len;
@@ -610,3 +611,190 @@ JSmartObject.timeline = function (context, config, events) {
 
     // let cnt = 0; context.on("click", ()=> cnt++ & 1 ? showTooltip() : hideTooltip())
 };
+
+
+/**
+ * @param context   the container d3-DOM obj
+ */
+
+
+JSmartObject.waterfall = function (context, data, config = {
+    bandWidth: 40,
+    bandMargin: 5,
+    colorPositive: "#393b79",
+    colorNegative: "#aec7e8",
+    margin: {top: 100, right: 200, bottom: 100, left: 50},
+    width: 700,
+    height: 500
+} ) {
+    let data1 = data || [
+        {
+            "Umsatzerlöse": 95.159,
+            "Materialaufwand": -36.340,
+            "Personalaufwand": -27.217 - 4.667,
+            "SbA": -15.201,
+            "Abschreibungen": -1.383,
+            "Zinsergebnisse": 0.292-0.159,
+            "Beteiligungsergebnisse":0.063,
+            "Sonstige Erlöse":1.658,
+            "Steueraufwandungen":-4.28,
+            "Konzernjahresergebnis":-7.92
+        }
+    ];
+
+    var bandWidth = config.bandWidth || 40;
+    var bandMargin = config.bandMargin || 5;
+    var colorPositive = config.colorPositive ||  "#393b79";
+    var colorNegative = config.colorNegative || "#aec7e8";
+    var keys = Object.getOwnPropertyNames(data1[0]);
+
+    var stack = d3.stack().keys(keys);
+
+    var margin = config.margin || {top: 100, right: 200, bottom: 100, left: 50},
+        width = (config.width || 700) - margin.left - margin.right,
+        height = (config.width || 500) - margin.top - margin.bottom;
+
+    var x = function (i) {
+        return bandWidth * i + bandMargin * (i+1) + margin.left;
+    };
+
+    // total amount is the first element by default
+    var totalY = data1[0][keys[0]]
+
+    var y = d3.scaleLinear([totalY, 0], [height, 0]);
+
+    var svg = context
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+    var layer = svg.selectAll(".layer")
+        .data(stack(data1).map(function(e, i, arr){
+            var hi = y(Math.abs(e[0][1] - e[0][0]));
+            e["y"] = e[0]["data"][e["key"]];
+            e["x"] = e["index"];
+            e["label"] =  d3.format(".2f")(e[0]["data"][e["key"]]);
+
+
+            //y0 the y pos of upper left point
+            //y1 the starting pos of next rect
+            e['height'] = hi;
+            if(i===0){
+                e['y1'] = 0;
+                e['y0'] = 0;
+            }
+            else{
+                e['y1'] = arr[i-1]['y1']+ (e.y > 0? -1 * hi: hi);
+                e['y0'] = e.y > 0? e['y1']: arr[i-1]['y1'];
+            }
+
+            return e;
+        }))
+        .enter().append("g")
+        .attr("class", "layer")
+    ;
+
+    var rect = layer.append("rect")
+        .attr("x", function(d,i){ return x(!i? i : 1);})
+        .attr("y", height)
+        .style("fill", function (d) {
+
+                if (d.y > 0)
+                    return colorPositive;
+
+                return colorNegative;
+
+
+        })
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1)
+        .style("cursor", "pointer")
+        .attr("width", bandWidth)
+        .attr("height", 0)
+        .on("click", function (d) {
+            // console.log(d);
+        });
+
+    rect.transition()
+        .delay(function (d, i) {
+            return i * 10;
+        })
+        .duration(800)
+        .attr("y", function (d) {
+            return d.y0;
+        })
+        .attr("height", function (d) {
+            return d.height;
+        });
+    rect.transition()
+        .delay(function (d, i) {
+            return i * 50 + 800;
+        })
+        .attr("x", function (d, i) {
+            return x(i);
+        })
+    ;
+
+
+    setTimeout(function () {
+        layer
+            .append("text")
+            .attr("transform", function(d){ return "translate("+ [x(d.x) + bandWidth / 2, height+10 ]+")rotate(30)";})
+            .text(function (d) {
+                return d.key;
+            })
+            .style("font-size", "10px")
+            .attr("text-anchor", "start")
+        ;
+
+        layer
+            .append("text")
+            .attr("transform", function(d){ return "translate("+ [x(d.x) + bandWidth / 2, d.y0-5 ]+")";})
+            .text(function (d) {
+                    return d.label;
+            })
+            .style("font-size", "10px")
+            .attr("text-anchor", "middle")
+        ;
+
+        layer
+            .append("text")
+            .attr("transform", function(d){ return "translate("+ [x(d.x) + bandWidth / 2, d.y0+d.height/2 ]+")";})
+            .text(function (d) {
+                var val = Math.abs(d.y/totalY);
+                if(val > 0.05)
+                    return d3.format(".1%")(val);
+
+                return null;
+            })
+            .style("font-size", "10px")
+            .attr("fill","#fff")
+            .attr("text-anchor", "middle")
+        ;
+
+        svg.append("line")
+            .attr("x2", margin.left)
+            .attr("y2", height)
+            .attr("x1", margin.left)
+            .attr("y1", height)
+            .attr("stroke","#000")
+            .attr("stroke-width", 1)
+            .transition()
+            .delay(100)
+            .duration(500)
+            .attr(
+                "x2", bandWidth * 1.5 + x(keys.length - 1)
+            );
+
+        svg.append("text")
+            .attr("x",  bandWidth * 1.5 + x(keys.length - 1) )
+            .attr("y",  -40)
+            .attr("text-anchor",  "end")
+            .style("font-size", "10px")
+            .text("in Mio. €");
+
+
+    }, 800)
+}

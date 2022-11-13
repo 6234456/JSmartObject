@@ -24,5 +24,13 @@ module.exports = [
         },
         target: "web",
         mode: 'development'
+    }, {
+        entry: './src/demo/shape.js',
+        output: {
+            filename: 'shape.js',
+            path: path.resolve(__dirname, 'dist/demo')
+        },
+        target: "web",
+        mode: 'development'
     }
 ];
