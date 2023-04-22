@@ -34,6 +34,57 @@ JSmartObject.blockArrow = function ({height, width, angle}) {
     return "M0 0 L" + width + " 0 L" + (offsetX + width) + " " + height / 2 + " " + "L" + width + " " + height + " L0 " + height + " L" + offsetX + " " + height / 2 + " Z";
 };
 
+JSmartObject.blockArrowChain = function (context, config= {height:24, width:60, angle:110, gap:1, cnt:5, widerWidthAfterTrans:145}){
+    const {
+       width,
+       height,
+       angle,
+       gap,
+       cnt,
+       widerWidthAfterTrans
+    } = config
+
+    const stage = context
+    const p = JSmartObject.blockArrow({height: height, width: width, angle:angle})
+    const totalWidth = width * cnt + (cnt - 1) * gap
+    const narrowerWidthAfterTrans = (totalWidth - widerWidthAfterTrans - (cnt - 1) * gap ) / (cnt - 1)
+    const path = stage.append("g").selectAll("path")
+        .data(Array.from({length:cnt}).map((_,i)=>i))
+        .enter()
+        .append("path")
+    let lenArr = Array.from({length:cnt}).map((_)=>width)
+    let translateArr = () => lenArr.slice(0, -1).reduce((acc, e) => [ ...acc, acc[acc.length-1] + e + gap]  , [0])
+    let tranArr = translateArr()
+
+    path.attr("transform", (_, i) => `translate(${(width + gap)*i}, 0)`)
+        .attr("d", p)
+        .on("mouseover", (_,i)=>{
+            const adjust = () => {
+                lenArr = lenArr.map((_, index)=> index === i ? widerWidthAfterTrans: narrowerWidthAfterTrans)
+                tranArr = translateArr()
+            }
+
+            path.transition().duration(500).attrTween("d", ( _, index)=>{
+                return (t)=>{
+                    const width = lenArr[index]
+                    if (index === i)
+                        return JSmartObject.blockArrow({height: height, width: width + t * (widerWidthAfterTrans - width), angle:110})
+                    else
+                        return JSmartObject.blockArrow({height: height, width: width + t * (narrowerWidthAfterTrans - width), angle:110})
+                }
+            }).attrTween("transform", (_, index) => {
+                return (t)=>{
+                    const trans = tranArr[index]
+                    const newTrans = index <= i ?  (narrowerWidthAfterTrans + gap) * index : ((narrowerWidthAfterTrans + gap) * (index -1) + gap + widerWidthAfterTrans)
+
+                    return `translate(${trans + (newTrans - trans) * t}, 0)`
+                }
+            }).on("end", ()=>{
+                adjust()
+            }).on("interrupt", () => {adjust()})
+        })
+}
+
 /**
  * @return d attr of path obj
  *
@@ -625,7 +676,9 @@ JSmartObject.waterfall = function (context, data, config = {
     colorNegative: "#aec7e8",
     margin: {top: 100, right: 200, bottom: 100, left: 50},
     width: 700,
-    height: 500
+    height: 500,
+    numberFormat: ".2f",
+    legendTopRight: "EUR Mio."
 } ) {
     let data1 = data || [
         {
@@ -647,6 +700,8 @@ JSmartObject.waterfall = function (context, data, config = {
     var colorPositive = config.colorPositive ||  "#393b79";
     var colorNegative = config.colorNegative || "#aec7e8";
     var keys = Object.getOwnPropertyNames(data1[0]);
+    var numberFormat = config.numberFormat || ".2f";
+    let legendTopRight = config.legendTopRight || "EUR Mio."
 
     var stack = d3.stack().keys(keys);
 
@@ -675,7 +730,7 @@ JSmartObject.waterfall = function (context, data, config = {
             var hi = y(Math.abs(e[0][1] - e[0][0]));
             e["y"] = e[0]["data"][e["key"]];
             e["x"] = e["index"];
-            e["label"] =  d3.format(".2f")(e[0]["data"][e["key"]]);
+            e["label"] =  d3.format(numberFormat)(Math.abs(e[0]["data"][e["key"]]));
 
 
             //y0 the y pos of upper left point
@@ -793,7 +848,7 @@ JSmartObject.waterfall = function (context, data, config = {
             .attr("y",  -40)
             .attr("text-anchor",  "end")
             .style("font-size", "10px")
-            .text("in Mio. €");
+            .text(legendTopRight);
 
 
     }, 800)

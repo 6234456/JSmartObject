@@ -13,6 +13,7 @@ import {JSmartObject} from "../../index";
     };
 
     (function(id) {
-        JSmartObject.waterfall(setStage(id))
+        //JSmartObject.waterfall(setStage(id))
+       JSmartObject.blockArrowChain(setStage(id))
     })("#time-line");
 })();
