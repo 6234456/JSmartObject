@@ -663,6 +663,103 @@ JSmartObject.timeline = function (context, config, events) {
     // let cnt = 0; context.on("click", ()=> cnt++ & 1 ? showTooltip() : hideTooltip())
 };
 
+JSmartObject.waterfall0 = function (context, data, labels, config = {
+    bandWidth: 40,
+    bandMargin: 5,
+    colorPositive: "#393b79",
+    colorNegative: "#aec7e8",
+    margin: {top: 100, right: 200, bottom: 100, left: 50},
+    width: 700,
+    height: 500,
+    numberFormat: ".2f",
+    legendTopRight: "EUR Mio."
+} ) {
+   let data1 = data || [
+       {period: "start", value: [10], isStatic: true},
+       {period: "Q1", value: [12]},
+       {period: "Q2", value: [50]},
+       {period: "Q3", value: [], isStatic: true},
+       {period: "Q4", value: [-8]},
+       {period: "Q5", value: [50]},
+       {period: "end", value: [], isStatic: true},
+   ];
+
+   const X = d3.map(data1, d=>d.period);
+   const Y = d3.cumsum(data1, (d,i)=> i===0||!d.isStatic ? d3.sum(d.value):0);
+   //cumsum of the array
+   const YArr = data1.reduce((acc, e)=>{
+       return [...acc, e.value.length?d3.zip(e.value, acc[acc.length-1]).map(x=>d3.sum(x)):acc[acc.length-1]];
+   }, [data1[0].value.map(e=>0)]);
+
+   let reductions = (ar) => {
+       return ar.reduce((arr, e, i)  => {
+           return i === 0? [[0, e]] : [...arr, [arr[arr.length-1][1], e+arr[arr.length-1][1]]]
+       }, []).map(e=>d3.sort(e))
+   }
+
+   let stack = d3.stack().keys(labels).value((d, k) => d.value[labels.indexOf(k)])(data1).map(
+       (e, i0) => {
+           return e.map(
+               (j, i) => i===0?[... d3.sort([j[0], j[1]]), j.data]:j.data.isStatic?reductions(YArr[i])[i0]:
+               [... d3.sort([j[0]+Y[i-1], j[1]+Y[i-1]]), j.data  ]
+           )
+       }
+   );
+
+   let xDomain = new d3.InternSet(X);
+   let yDomain = stack.flat().reduce((acc, e)=>{
+        return [acc[0]>e[0]?e[0]:acc[0],acc[1]<e[1]?e[1]:acc[1]]
+   }, [Infinity, -Infinity]);
+
+   const xScale = d3.scaleBand(xDomain, [config.margin.left, config.width + config.margin.left]).paddingInner(0.2);
+   const yScale = d3.scaleLinear(yDomain, [config.margin.top + config.height, config.margin.top]);
+
+   const xAxis = d3.axisBottom().scale(xScale);
+   const yAxis = d3.axisLeft().scale(yScale);
+
+   const g = context
+        .attr("width", config.width + config.margin.left + config.margin.right)
+        .attr("height", config.height + config.margin.top + config.margin.bottom);
+
+   g.append("g").attr("transform", `translate(0,${config.height + config.margin.top + 5})`).call(xAxis);
+   g.append("g").attr("transform", `translate(${config.margin.left - 5},0)`).call(yAxis).call(
+       g => g.selectAll(".tick line").clone()
+           .attr("x2", config.width)
+           .attr("stroke-opacity", 0.1)
+           .attr("stroke-dasharray", "0 2 0")
+   );
+
+   g.append("g").selectAll("g").data(stack).join("g").attr("fill", (_,i)=>d3.schemeAccent[i])
+       .selectAll("rect").data(D => D)
+       .join("rect")
+       .attr("fill", (_,i)=>(data1[i].isStatic)?"#ccc":null)
+       .attr("x", (_, i)=> xScale(data1[i].period))
+       .attr("y", x => yScale(x[1]))
+       .attr("height", x => yScale(x[0])-yScale(x[1]))
+       .attr("width", xScale.bandwidth());
+
+   g.append("g").selectAll("text").data(stack[stack.length - 1]).join("text").text((_,i) => {
+       const d = data1[i];
+       if (d.isStatic) return Y[i]; //!!!!
+       return ((Y[i] > Y[i-1])? "↑ ":"↓ ") + Math.abs(Y[i] - Y[i-1]);
+   })
+       .attr("text-anchor", "middle")
+       .attr("x", (d, i) => xScale(X[i]) + xScale.bandwidth()/2)
+       .attr("y", x => yScale(x[1]) - 10)
+       .style("font-family", "Arial")
+       .style("font-size", "10px");
+
+   g.append("g").selectAll("line").data(stack[stack.length - 1].slice(0, -1)).join("line")
+       .attr("x1", (d,i) => xScale(X[i]) + xScale.bandwidth())
+       .attr("x2", (_,i) => xScale(X[i + 1]))
+       .attr("y1", (d,i)=> (data1[i].isStatic && Y[i] >0) || (Y[i]>=Y[i-1] && Y[i+1] > 0)?yScale(d[1]):yScale(d[0]))
+       .attr("y2", (d,i)=> (data1[i].isStatic && Y[i] >0) || (Y[i]>=Y[i-1] && Y[i+1] > 0)?yScale(d[1]):yScale(d[0]))
+       .attr("stroke", "black")
+       .attr("stroke-dasharray", "0 4 0")
+
+
+}
+
 
 /**
  * @param context   the container d3-DOM obj
