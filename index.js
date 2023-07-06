@@ -192,6 +192,113 @@ JSmartObject.curveArrow = function ({innerR, outerR, angle}) {
         + `A ${innerR * curved} ${innerR} 0 0 0 0 ${outerR * - 1}`
 };
 
+JSmartObject.highlightBox = function (context, config = {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0
+}) {
+   context.append("rect").attr("fill", "#ccc").attr("stroke", "#000").style("opacity", "0.15").attr("stroke-dasharray", "3 1")
+       .attr("x", config.x)
+       .attr("y", config.y)
+       .attr("width", config.width)
+       .attr("height", config.height)
+}
+
+/**
+ * <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+ *   <defs>
+ *     <!-- A marker to be used as an arrowhead -->
+ *     <marker
+ *       id="arrow"
+ *       viewBox="0 0 10 10"
+ *       refX="3"
+ *       refY="3"
+ *       markerWidth="6"
+ *       markerHeight="6"
+ *       orient="auto-start-reverse">
+ *       <path d="M 0 0 L 10 3 L 0 6 z" />
+ *     </marker>
+ *   </defs>
+ *
+ *   <!-- A curved path with markers -->
+ *   <path
+ *     d="M 110 10
+ *        C 120 20, 130 20, 140 10
+ *        C 150 0, 160 0, 170 10
+ *        C 180 20, 190 20, 200 10"
+ *     stroke="black"
+ *     fill="none"
+ *     marker-end="url(#arrow)" />
+ * </svg>
+ */
+
+JSmartObject.arrowHead = function (svg){
+    const id = `arrow_${new Date().valueOf()}`
+
+    let defs = ! svg.select("defs").empty() ?
+        svg.select("defs") :
+        svg.append("defs");
+
+    defs.append("marker")
+        .attr("id", id)
+        .attr("viewBox", "0 0 10 10")
+        .attr("refX","3")
+        .attr("refY","3")
+        .attr("markerWidth", "6")
+        .attr("markerHeight", "6")
+        .attr("orient", "auto-start-reverse")
+        .append("path").attr("d","M 0 0 L 10 3 L 0 6 z" )
+    ;
+
+    return id;
+}
+
+JSmartObject.arrowHeadedLine = function (context, config = {
+    startPoint: [0, 0],
+    endPoint: [0, 0],
+    plateauY: 0,
+    text: "",
+    fontSize: 9,
+    arrowHeadId: "",
+    isBgOval:true
+}) {
+
+    context.append("path")
+        .attr("d", `M ${config.startPoint[0]} ${config.startPoint[1]} L ${config.startPoint[0]} ${config.plateauY} L ${config.endPoint[0]} ${config.plateauY} L ${config.endPoint[0]} ${config.endPoint[1]}`)
+        .attr("stroke", "black")
+        .attr("fill", "none")
+        .attr("marker-end", `url(#${config.arrowHeadId})`);
+
+    let bg = config.isBgOval? context.append("ellipse")  : context.append("rect");
+
+    let t = context.append("text").text(config.text).attr("font-size", config.fontSize).attr("x", (config.startPoint[0] + config.endPoint[0])/2)
+        .attr("y", config.plateauY )
+        .attr("dominant-baseline", "central")
+        .attr("text-anchor", "middle" )
+    ;
+
+    let dimension = t.node().getBBox();
+
+    if (config.isBgOval){
+        bg
+            .attr("cx", dimension.x + dimension.width / 2)
+            .attr("cy", dimension.y + dimension.height / 2)
+            .attr("rx", dimension.width/2 + 10)
+            .attr("ry", dimension.height/2 + 3)
+
+    }else {
+        bg.attr("x", dimension.x - 5)
+            .attr("y", dimension.y)
+            .attr("width", dimension.width + 10)
+            .attr("height", dimension.height)
+            .attr("rx", Math.min(dimension.width, dimension.height) * 0.15)
+
+    }
+
+    bg.attr("fill", "#fff").attr("stroke", "#000")
+    ;
+}
 
 
 
@@ -675,12 +782,12 @@ JSmartObject.waterfall0 = function (context, data, labels, config = {
     legendTopRight: "EUR Mio."
 } ) {
    let data1 = data || [
-       {period: "start", value: [10], isStatic: true},
-       {period: "Q1", value: [12]},
-       {period: "Q2", value: [50]},
+       {period: "start", value: [10, 3], isStatic: true},
+       {period: "Q1", value: [12, 3]},
+       {period: "Q2", value: [5, 3]},
        {period: "Q3", value: [], isStatic: true},
-       {period: "Q4", value: [-8]},
-       {period: "Q5", value: [50]},
+       {period: "Q4", value: [8, 3]},
+       {period: "Q5", value: [5, 2]},
        {period: "end", value: [], isStatic: true},
    ];
 
@@ -755,7 +862,28 @@ JSmartObject.waterfall0 = function (context, data, labels, config = {
        .attr("y1", (d,i)=> (data1[i].isStatic && Y[i] >0) || (Y[i]>=Y[i-1] && Y[i+1] > 0)?yScale(d[1]):yScale(d[0]))
        .attr("y2", (d,i)=> (data1[i].isStatic && Y[i] >0) || (Y[i]>=Y[i-1] && Y[i+1] > 0)?yScale(d[1]):yScale(d[0]))
        .attr("stroke", "black")
-       .attr("stroke-dasharray", "0 4 0")
+       .attr("stroke-dasharray", "0 4 0");
+
+   const startIndex = 0;
+   const endIndex = 3;
+   JSmartObject.arrowHeadedLine(g, {
+       startPoint: [ xScale(X[startIndex]) + xScale.bandwidth()/2, yScale(stack[stack.length - 1][startIndex][1]) -25  ],
+       endPoint: [ xScale(X[endIndex]) + xScale.bandwidth()/2, yScale(stack[stack.length - 1][endIndex][1]) -25  ],
+       plateauY: yScale(yDomain[1])+95,
+       text: `${Y[endIndex]>Y[startIndex]?"+":""}${Math.round((Y[endIndex]/Y[startIndex] - 1)*1000)/10}%`,
+       fontSize: 8,
+       arrowHeadId: JSmartObject.arrowHead(getSVG(g)),
+       isBgOval: true
+   });
+
+   const highlightIndex = 6
+   JSmartObject.highlightBox(g, {
+      y:  yScale(stack[stack.length - 1][highlightIndex][1]) -25,
+       x: xScale(X[highlightIndex-1]) - 5,
+       width: xScale(X[highlightIndex]) - xScale(X[highlightIndex-1]) + xScale.bandwidth() + 10,
+       height: yScale(0) - yScale(stack[stack.length - 1][highlightIndex][1]) + 50
+   })
+
 
 
 }
