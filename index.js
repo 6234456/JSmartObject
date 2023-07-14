@@ -261,11 +261,16 @@ JSmartObject.arrowHeadedLine = function (context, config = {
     text: "",
     fontSize: 9,
     arrowHeadId: "",
-    isBgOval:true
+    isBgOval:true,
+    roundCornerRadius: 20
 }) {
 
+    const d = config.roundCornerRadius ?
+        `M ${config.startPoint[0]} ${config.startPoint[1]} v${config.plateauY - config.startPoint[1] + config.roundCornerRadius } a${config.roundCornerRadius},${config.roundCornerRadius} 0 0 1 ${config.roundCornerRadius},-${config.roundCornerRadius} h${config.endPoint[0]-config.startPoint[0] - config.roundCornerRadius * 2} a${config.roundCornerRadius},${config.roundCornerRadius} 0 0 1 ${config.roundCornerRadius},${config.roundCornerRadius} v${config.endPoint[1]-config.plateauY - config.roundCornerRadius}`
+        :
+        `M ${config.startPoint[0]} ${config.startPoint[1]} L ${config.startPoint[0]} ${config.plateauY} L ${config.endPoint[0]} ${config.plateauY} L ${config.endPoint[0]} ${config.endPoint[1]}`
     context.append("path")
-        .attr("d", `M ${config.startPoint[0]} ${config.startPoint[1]} L ${config.startPoint[0]} ${config.plateauY} L ${config.endPoint[0]} ${config.plateauY} L ${config.endPoint[0]} ${config.endPoint[1]}`)
+        .attr("d", d)
         .attr("stroke", "black")
         .attr("fill", "none")
         .attr("marker-end", `url(#${config.arrowHeadId})`);
@@ -873,7 +878,8 @@ JSmartObject.waterfall0 = function (context, data, labels, config = {
        text: `${Y[endIndex]>Y[startIndex]?"+":""}${Math.round((Y[endIndex]/Y[startIndex] - 1)*1000)/10}%`,
        fontSize: 8,
        arrowHeadId: JSmartObject.arrowHead(getSVG(g)),
-       isBgOval: true
+       isBgOval: true,
+       roundCornerRadius:5
    });
 
    const highlightIndex = 6
