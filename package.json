@@ -2,10 +2,11 @@
   "name": "jsmartobject",
   "version": "1.0.3",
   "description": "Office-SmartObject implemented in D3js",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack"
+    "build": "webpack",
+    "run": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -18,10 +19,12 @@
   },
   "homepage": "https://github.com/6234456/JSmartObject#readme",
   "devDependencies": {
-    "webpack": "^4.17.1",
-    "webpack-cli": "^3.1.0"
+    "express": "^4.18.3",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "d3": "^7.6.1"
+    "d3": "^7.8.5",
+    "d3-sankey": "^0.12.3"
   }
 }
