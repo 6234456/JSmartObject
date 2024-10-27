@@ -940,10 +940,10 @@ JSmartObject.waterfall0 = function (context, data, labels, config = {
 } ) {
    let data1 = data || [
        {period: "start", value: [15], isStatic: true},
-       {period: "Q1", value: [3]},
-       {period: "Q2", value: [5]},
+       {period: "Q1", value: [-3]},
+       {period: "Q2", value: [-6]},
        {period: "Q3", value: [], isStatic: true},
-       {period: "Q4", value: [-2]},
+       {period: "Q4", value: [5]},
        {period: "Q5", value: [-2]},
        {period: "end", value: [], isStatic: true},
    ];
@@ -1026,7 +1026,7 @@ JSmartObject.waterfall0 = function (context, data, labels, config = {
    JSmartObject.arrowHeadedLine(g, {
        startPoint: [ xScale(X[startIndex]) + xScale.bandwidth()/2, yScale(stack[stack.length - 1][startIndex][1]) -25  ],
        endPoint: [ xScale(X[endIndex]) + xScale.bandwidth()/2, yScale(stack[stack.length - 1][endIndex][1]) -25  ],
-       plateauY: yScale(yDomain[1])+95,
+       plateauY: yScale(yDomain[1])-50,
        text: `${Y[endIndex]>Y[startIndex]?"+":""}${Math.round((Y[endIndex]/Y[startIndex] - 1)*1000)/10}%`,
        fontSize: 8,
        arrowHeadId: JSmartObject.arrowHead(getSVG(g)),

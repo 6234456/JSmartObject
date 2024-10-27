@@ -21,8 +21,9 @@ import {JSmartObject} from "../src";
      */
     (function(id) {
         let context = setStage(id);
-        //JSmartObject.waterfall0(context,null,["value1"])
+        JSmartObject.waterfall0(context,null,["value1"])
         //JSmartObject.blockArrowChain(context)
+        /*
         JSmartObject.sankey(context, {
             links: [
                 { source: "MBAG", target: "Main Operating Income", value: 523 },
@@ -39,5 +40,6 @@ import {JSmartObject} from "../src";
             nodeGroup: d => d.id.split(/\W/)[0],
             height: 600
         })
+         */
     })("#time-line");
 })();
