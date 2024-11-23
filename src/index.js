@@ -70,9 +70,9 @@ JSmartObject.blockArrowChain = function (context, config= {height:24, width:60, 
                 return (t)=>{
                     const width = lenArr[index]
                     if (index === i)
-                        return JSmartObject.blockArrow({height: height, width: width + t * (widerWidthAfterTrans - width), angle:110})
+                        return JSmartObject.blockArrow({height: height, width: width + t * (widerWidthAfterTrans - width), angle})
                     else
-                        return JSmartObject.blockArrow({height: height, width: width + t * (narrowerWidthAfterTrans - width), angle:110})
+                        return JSmartObject.blockArrow({height: height, width: width + t * (narrowerWidthAfterTrans - width), angle})
                 }
             }).attrTween("transform", (_, index) => {
                 return (t)=>{
@@ -85,6 +85,8 @@ JSmartObject.blockArrowChain = function (context, config= {height:24, width:60, 
                 adjust()
             }).on("interrupt", () => {adjust()})
         })
+
+    return path
 }
 
 /**
@@ -1236,3 +1238,73 @@ JSmartObject.waterfall = function (context, data, config = {
 
     }, 800)
 }
+
+/**
+ * @return d attr of path obj
+ *
+ * origin is the center of arc
+ *
+ * config object:
+ * attributes
+ *
+ * innerR           :Number                         inner radius of the arc
+ * outerR           :Number                         outer radius of the arc
+ * angle            :Number                         the angle of the arc in deg
+ */
+JSmartObject.arcBlockArrow = function ({innerR, outerR, angle, frontArrowHeight, endConcaveArrowHeight}) {
+
+    // total angle consists of  arrow and arc part
+    const angleArc = angle  / 180 * Math.PI;
+
+    const startingY = Math.hypot(innerR + (outerR - innerR) / 2, frontArrowHeight)
+    const edgeStartingArrow = Math.hypot((outerR - innerR) / 2, frontArrowHeight)
+
+    // solve the intersecting points of two circles (0, startingY) r = edgeStartingArrow and (0, 0) r = innerR
+
+    const intersect = (x1, y1, x2, y2, r1, r2, isFront=true) => {
+        const d = Math.hypot(x1-x2, y1-y2)
+        const l = (r1 * r1 - r2*r2 + d*d) / (2*d)
+        const h = Math.sqrt(r1*r1 - l*l)
+
+        const res1 =  [l/d * (x2-x1) + h/d*(y2 - y1) + x1, l/d*(y2 - y1) - h/d*(x2 - x1) + y1]
+        const res2  = [l/d * (x2-x1) - h/d*(y2 - y1) + x1, l/d*(y2 - y1) + h/d*(x2 - x1) + y1]
+
+        if(res1[0] > res2[0] === isFront) return res1
+
+        return res2
+    }
+
+    const p1 = intersect(0, startingY, 0, 0, edgeStartingArrow, outerR)
+    const p2 = intersect(0, startingY, 0, 0, edgeStartingArrow, innerR)
+
+    const endArrowLineCenter = intersect(outerR * Math.sin(angleArc),outerR * Math.cos(angleArc), 0, 0,
+        Math.hypot((outerR-innerR)/2, endConcaveArrowHeight), innerR + (outerR - innerR) / 2
+    )
+
+
+    return `M ${p1[0]} ${p1[1]*-1} `
+        + `A ${outerR} ${outerR} 0 ${angle > 180 ? 1: 0} 1 ${outerR * Math.sin(angleArc)} ${outerR * Math.cos(angleArc) * - 1} `
+        + `L ${endArrowLineCenter[0]} ${endArrowLineCenter[1] * -1}`
+        + `L ${innerR * Math.sin(angleArc)} ${innerR * Math.cos(angleArc) * -1} `
+        + `A ${innerR } ${innerR} 0 ${angle > 180 ? 1: 0} 0 ${p2[0]} ${p2[1]*-1} `
+        + `L 0 ${startingY * -1}`
+        + `Z`
+};
+
+JSmartObject.curveTextPath= function (r, endPoint, sweeping=true, container=null, text=""){
+    const d = `M 0 ${r*-1} `
+        + `A ${r} ${r} 0 0 ${sweeping ? 1: 0} ${endPoint[0]} ${endPoint[1]} `
+        + `Z`
+
+    if(container){
+        const id = `p${+new Date()}`
+        const g = container.append("g");
+        g.append("path").attr("d", d).attr("fill", "transparent").attr("id", id);
+        g.append("text").append("textPath").attr("href", `#${id}`).text(text);
+
+        return g;
+    }
+
+    return d
+}
+

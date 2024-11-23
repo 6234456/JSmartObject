@@ -21,7 +21,15 @@ import {JSmartObject} from "../src";
      */
     (function(id) {
         let context = setStage(id);
-        JSmartObject.waterfall0(context,null,["value1"])
+        //JSmartObject.waterfall0(context,null,["value1"])
+        JSmartObject.blockArrowChain(context, {
+            width: 30,
+            widerWidthAfterTrans: 80,
+            gap: 15,
+            cnt:6,
+            angle: 120,
+            height: 40
+        }).call(JSmartObject.dropShadow({})).call(JSmartObject.reflection())
         //JSmartObject.blockArrowChain(context)
         /*
         JSmartObject.sankey(context, {
